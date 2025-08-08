@@ -1,9 +1,7 @@
-import Link from "next/link";
-import { Button } from "./ui/button";
-import { Menu } from "lucide-react";
 import { ModeToggle } from "./ui/modeToggle";
 import Sidebar from "./Sidebar";
 import Navlist from "./Navlist";
+import { Skeleton } from "./ui/skeleton";
 
 export default function Navbar() {
   return (
@@ -12,9 +10,6 @@ export default function Navbar() {
       <Navlist />
       <div className="flex items-center gap-5">
         <ModeToggle />
-        {/* <Button className="block md:hidden">
-          <Menu />
-        </Button> */}
         <Sidebar />
       </div>
     </header>
