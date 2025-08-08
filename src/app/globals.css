@@ -181,11 +181,23 @@
   --shadow-2xl: var(--shadow-2xl);
 }
 .header {
-  @apply flex justify-between items-center py-3 px-5 border border-b;
+  @apply flex justify-between items-center py-3 px-5 border-b;
 }
 
 .nav-link {
   @apply w-full block;
+}
+
+section {
+  padding: 70px 0;
+}
+
+.container {
+  @apply max-w-2xl mx-auto px-5;
+}
+
+.hero {
+  @apply flex items-center justify-center;
 }
 
 @layer base {
