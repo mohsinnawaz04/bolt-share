@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertCircleIcon,
   FileArchiveIcon,
@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { saveInitialFilesToLocalStorage } from "@/lib/utils";
 import { uploadFiles } from "@/lib/uploadFiles";
+import { toast } from "sonner";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -157,54 +158,22 @@ type UploadProgress = {
 };
 
 // Function to simulate file upload with more realistic timing and progress
-const simulateUpload = (
+// Updated simulateUpload that only handles increments until stopped
+function simulateUpload(
   totalBytes: number,
-  onProgress: (progress: number) => void,
-  onComplete: () => void
-) => {
-  let timeoutId: NodeJS.Timeout;
-  let uploadedBytes = 0;
-  let lastProgressReport = 0;
+  onProgress: (progress: number) => void
+) {
+  let uploaded = 0;
+  const speed = totalBytes / 50; // adjust for speed
+  const interval = setInterval(() => {
+    uploaded += speed;
+    const progress = Math.min(Math.round((uploaded / totalBytes) * 100), 95);
+    onProgress(progress);
+  }, 100);
 
-  const simulateChunk = () => {
-    // Simulate variable network conditions with random chunk sizes
-    const chunkSize = Math.floor(Math.random() * 300000) + 2000;
-    uploadedBytes = Math.min(totalBytes, uploadedBytes + chunkSize);
-
-    // Calculate progress percentage (0-100)
-    const progressPercent = Math.floor((uploadedBytes / totalBytes) * 100);
-
-    // Only report progress if it's changed by at least 1%
-    if (progressPercent > lastProgressReport) {
-      lastProgressReport = progressPercent;
-      onProgress(progressPercent);
-    }
-
-    // Continue simulation if not complete
-    if (uploadedBytes < totalBytes) {
-      // Variable delay between 50ms and 500ms to simulate network fluctuations (reduced for faster uploads)
-      const delay = Math.floor(Math.random() * 450) + 50;
-
-      // Occasionally add a longer pause to simulate network congestion (5% chance, shorter duration)
-      const extraDelay = Math.random() < 0.05 ? 500 : 0;
-
-      timeoutId = setTimeout(simulateChunk, delay + extraDelay);
-    } else {
-      // Upload complete
-      onComplete();
-    }
-  };
-
-  // Start the simulation
-  timeoutId = setTimeout(simulateChunk, 100);
-
-  // Return a cleanup function to cancel the simulation
-  return () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  };
-};
+  // stop increments when real upload finishes
+  return () => clearInterval(interval);
+}
 
 export default function FileUploader() {
   const maxSizeMB = 5;
@@ -215,64 +184,173 @@ export default function FileUploader() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
 
   // Function to handle newly added files
-  const handleFilesAdded = (addedFiles: FileWithPreview[]) => {
-    // Initialize progress tracking for each new file
-    const newProgressItems = addedFiles.map((file) => ({
-      fileId: file.id,
-      progress: 0,
-      completed: false,
-    }));
+  // const handleFilesAdded = (addedFiles: FileWithPreview[]) => {
+  //   // Initialize progress tracking for each new file
+  //   const newProgressItems = addedFiles.map((file) => ({
+  //     fileId: file.id,
+  //     progress: 0,
+  //     completed: false,
+  //   }));
 
-    // Add new progress items to state
-    setUploadProgress((prev) => [...prev, ...newProgressItems]);
+  //   // Add new progress items to state
+  //   setUploadProgress((prev) => [...prev, ...newProgressItems]);
 
-    // Store cleanup functions
-    const cleanupFunctions: Array<() => void> = [];
+  //   // Store cleanup functions
+  //   const cleanupFunctions: Array<() => void> = [];
 
-    // Start simulated upload for each file
-    addedFiles.forEach((file) => {
-      const fileSize =
-        file.file instanceof File ? file.file.size : file.file.size;
+  //   // Start simulated upload for each file
+  //   addedFiles.forEach((file) => {
+  //     const fileSize =
+  //       file.file instanceof File ? file.file.size : file.file.size;
 
-      // Save FIles to InitialFiles Array
-      addFilesToArray(file);
+  //     // Save FIles to InitialFiles Array
+  //     addFilesToArray(file);
 
-      // Start the upload simulation and store the cleanup function
-      const cleanup = simulateUpload(
-        fileSize,
-        // Progress callback
-        (progress) => {
+  //     // Start the upload simulation and store the cleanup function
+  //     const cleanup = simulateUpload(
+  //       fileSize,
+  //       // Progress callback
+  //       (progress) => {
+  //         setUploadProgress((prev) =>
+  //           prev.map((item) =>
+  //             item.fileId === file.id ? { ...item, progress } : item
+  //           )
+  //         );
+  //       },
+  //       // Complete callback
+  //       () => {
+  //         setUploadProgress((prev) =>
+  //           prev.map((item) =>
+  //             item.fileId === file.id ? { ...item, completed: true } : item
+  //           )
+  //         );
+  //       }
+  //     );
+
+  //     cleanupFunctions.push(cleanup);
+  //   });
+
+  //   // Return a cleanup function that cancels all animations
+  //   return () => {
+  //     cleanupFunctions.forEach((cleanup) => cleanup());
+  //   };
+  // };
+
+  // Remove the progress tracking for the file
+  // const handleFileRemoved = (fileId: string) => {
+  //   setUploadProgress((prev) => prev.filter((item) => item.fileId !== fileId));
+
+  //   // Also Update the initialFiles Array saved in localStorage
+  //   updateInitialFilesArray(fileId, initialFiles);
+  // };
+
+  // const handleUpload = async () => {
+  //   const fileList = files.filter(
+  //     (f) => f.file instanceof File
+  //   ) as FileWithPreview[];
+
+  //   fileList.forEach((file) => {
+  //     setUploadProgress((prev) => [
+  //       ...prev,
+  //       { fileId: file.id, progress: 0, completed: false },
+  //     ]);
+
+  //     // Start simulated progress immediately on click
+  //     const cleanup = simulateUpload(
+  //       file.file.size,
+  //       (progress) => {
+  //         setUploadProgress((prev) =>
+  //           prev.map((item) =>
+  //             item.fileId === file.id ? { ...item, progress } : item
+  //           )
+  //         );
+  //       },
+  //       () => {
+  //         setUploadProgress((prev) =>
+  //           prev.map((item) =>
+  //             item.fileId === file.id
+  //               ? { ...item, completed: true, progress: 100 }
+  //               : item
+  //           )
+  //         );
+  //       }
+  //     );
+
+  //     // Actual Supabase upload
+  //     uploadFiles([file.file as File])
+  //       .then(() => {
+  //         cleanup(); // stop simulation early if done
+  //         setUploadProgress((prev) =>
+  //           prev.map((item) =>
+  //             item.fileId === file.id
+  //               ? { ...item, completed: true, progress: 100 }
+  //               : item
+  //           )
+  //         );
+  //       })
+  //       .catch(() => {
+  //         cleanup();
+  //         // optionally handle failure
+  //       });
+  //   });
+  // };
+
+  const handleUpload = async () => {
+    const fileList = files.filter(
+      (f) => f.file instanceof File
+    ) as FileWithPreview[];
+
+    // Initialize progress for all files
+    fileList.forEach((file) => {
+      setUploadProgress((prev) => [
+        ...prev,
+        { fileId: file.id, progress: 0, completed: false },
+      ]);
+    });
+
+    const uploads = fileList.map((file) => {
+      return new Promise<void>((resolve, reject) => {
+        const stopSim = simulateUpload(file.file.size, (progress) => {
           setUploadProgress((prev) =>
             prev.map((item) =>
               item.fileId === file.id ? { ...item, progress } : item
             )
           );
-        },
-        // Complete callback
-        () => {
-          setUploadProgress((prev) =>
-            prev.map((item) =>
-              item.fileId === file.id ? { ...item, completed: true } : item
-            )
-          );
-        }
-      );
+        });
 
-      cleanupFunctions.push(cleanup);
+        uploadFiles([file.file as File])
+          .then(() => {
+            stopSim(); // stop simulation
+            setUploadProgress((prev) =>
+              prev.map((item) =>
+                item.fileId === file.id
+                  ? { ...item, progress: 100, completed: true }
+                  : item
+              )
+            );
+            resolve();
+          })
+          .catch((err) => {
+            stopSim();
+            reject(err);
+          });
+      });
     });
 
-    // Return a cleanup function that cancels all animations
-    return () => {
-      cleanupFunctions.forEach((cleanup) => cleanup());
-    };
-  };
-
-  // Remove the progress tracking for the file
-  const handleFileRemoved = (fileId: string) => {
-    setUploadProgress((prev) => prev.filter((item) => item.fileId !== fileId));
-
-    // Also Update the initialFiles Array saved in localStorage
-    updateInitialFilesArray(fileId, initialFiles);
+    try {
+      await Promise.all(uploads);
+      toast("Upload complete", {
+        description: "All files have been successfully uploaded",
+      });
+    } catch (err) {
+      toast("Upload failed", {
+        description: "Some files could not be uploaded",
+        action: {
+          label: "Retry Upload",
+          onClick: () => handleUpload(),
+        },
+      });
+    }
   };
 
   const [
@@ -292,7 +370,7 @@ export default function FileUploader() {
     maxFiles,
     maxSize,
     initialFiles,
-    onFilesAdded: handleFilesAdded,
+    // onFilesAdded: handleFilesAdded,
   });
 
   return (
@@ -384,7 +462,7 @@ export default function FileUploader() {
                         variant="ghost"
                         className="text-muted-foreground/80 hover:text-foreground -me-2 size-8 hover:bg-transparent"
                         onClick={() => {
-                          handleFileRemoved(file.id);
+                          // handleFileRemoved(file.id);
                           removeFile(file.id);
                         }}
                         aria-label="Remove file"
@@ -421,13 +499,14 @@ export default function FileUploader() {
               <div className="flex justify-end">
                 <Button
                   variant={"default"}
-                  onClick={() =>
-                    uploadFiles(
-                      files
-                        .filter((f) => f.file instanceof File)
-                        .map((f) => f.file as File)
-                    )
-                  }
+                  onClick={handleUpload}
+                  // onClick={() =>
+                  //   uploadFiles(
+                  //     files
+                  //       .filter((f) => f.file instanceof File)
+                  //       .map((f) => f.file as File)
+                  //   )
+                  // }
                 >
                   Upload
                 </Button>

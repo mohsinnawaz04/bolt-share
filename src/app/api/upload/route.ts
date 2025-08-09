@@ -18,15 +18,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // Unique slug to attach with final url
+  // Unique slug for public sharing
   const slug = randomBytes(3).toString("hex");
-  // For unique slug in filePaths to upload to supabase
+  // Unique random string for Supabase paths
   const random = randomBytes(4).toString("hex");
 
   const bundle = await prisma.bundle.create({
-    data: {
-      slug,
-    },
+    data: { slug },
   });
 
   const uploadedFiles = await Promise.all(
@@ -39,9 +37,9 @@ export async function POST(req: Request) {
 
       if (error) throw new Error(error.message);
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${data.path}`;
 
-      const savedFile = await prisma.file.create({
+      return prisma.file.create({
         data: {
           name: file.name,
           size: file.size,
@@ -50,14 +48,15 @@ export async function POST(req: Request) {
           bundleId: bundle.id,
         },
       });
-
-      return savedFile;
     })
   );
+
+  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/download/${slug}`;
 
   return NextResponse.json({
     message: "Files uploaded",
     slug,
+    shareUrl,
     files: uploadedFiles,
   });
 }
