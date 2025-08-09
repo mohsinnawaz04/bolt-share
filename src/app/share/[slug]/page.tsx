@@ -3,17 +3,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function SharePage({ params }: { params: { slug: string } }) {
+export default function SharePage() {
+  const { slug } = useParams();
   const [bundle, setBundle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBundle = async () => {
       try {
-        const res = await fetch(`/api/bundles/${params.slug}`);
+        const res = await fetch(`/api/bundles/${slug}`);
         if (!res.ok) throw new Error("Failed to fetch bundle");
         const data = await res.json();
         setBundle(data);
@@ -24,7 +25,7 @@ export default function SharePage({ params }: { params: { slug: string } }) {
       }
     };
     fetchBundle();
-  }, [params.slug]);
+  }, [slug]);
 
   if (loading) return <p>Loading...</p>;
   if (!bundle) return <p>Bundle not found</p>;

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { saveInitialFilesToLocalStorage } from "@/lib/utils";
 import { uploadFiles } from "@/lib/uploadFiles";
 import { toast } from "sonner";
+import { randomBytes } from "crypto";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -308,34 +309,37 @@ export default function FileUploader() {
       ]);
     });
 
-    const uploads = fileList.map((file) => {
-      return new Promise<void>((resolve, reject) => {
-        const stopSim = simulateUpload(file.file.size, (progress) => {
-          setUploadProgress((prev) =>
-            prev.map((item) =>
-              item.fileId === file.id ? { ...item, progress } : item
-            )
-          );
-        });
+    const slug = randomBytes(3).toString("hex"); // generate only once
 
-        uploadFiles([file.file as File])
-          .then(() => {
-            stopSim(); // stop simulation
+    const uploads = fileList.map(
+      (file) =>
+        new Promise<void>((resolve, reject) => {
+          const stopSim = simulateUpload(file.file.size, (progress) => {
             setUploadProgress((prev) =>
               prev.map((item) =>
-                item.fileId === file.id
-                  ? { ...item, progress: 100, completed: true }
-                  : item
+                item.fileId === file.id ? { ...item, progress } : item
               )
             );
-            resolve();
-          })
-          .catch((err) => {
-            stopSim();
-            reject(err);
           });
-      });
-    });
+
+          uploadFiles([file.file as File], slug)
+            .then(() => {
+              stopSim();
+              setUploadProgress((prev) =>
+                prev.map((item) =>
+                  item.fileId === file.id
+                    ? { ...item, progress: 100, completed: true }
+                    : item
+                )
+              );
+              resolve();
+            })
+            .catch((err) => {
+              stopSim();
+              reject(err);
+            });
+        })
+    );
 
     try {
       await Promise.all(uploads);

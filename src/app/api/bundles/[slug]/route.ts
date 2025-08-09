@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = params;
-
+  const { slug } = await params;
   const bundle = await prisma.bundle.findUnique({
     where: { slug },
     include: { files: true },

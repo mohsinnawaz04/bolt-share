@@ -7,7 +7,7 @@ export default function Navlist({
   return (
     <ul className={className}>
       <li>
-        <Link href={"#"} className="nav-link">
+        <Link href={"/"} className="nav-link">
           <Button className="w-full">Home</Button>
         </Link>
       </li>

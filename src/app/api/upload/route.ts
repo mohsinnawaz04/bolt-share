@@ -6,6 +6,17 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];
+  let slug = formData.get("slug") as string | null;
+
+  if (!slug) {
+    slug = randomBytes(3).toString("hex");
+  }
+
+  let bundle = await prisma.bundle.findUnique({ where: { slug } });
+
+  if (!bundle) {
+    bundle = await prisma.bundle.create({ data: { slug } });
+  }
 
   if (!files || files.length === 0) {
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -17,15 +28,8 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-
-  // Unique slug for public sharing
-  const slug = randomBytes(3).toString("hex");
   // Unique random string for Supabase paths
   const random = randomBytes(4).toString("hex");
-
-  const bundle = await prisma.bundle.create({
-    data: { slug },
-  });
 
   const uploadedFiles = await Promise.all(
     files.map(async (file) => {
@@ -51,7 +55,7 @@ export async function POST(req: Request) {
     })
   );
 
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/download/${slug}`;
+  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${slug}`;
 
   return NextResponse.json({
     message: "Files uploaded",

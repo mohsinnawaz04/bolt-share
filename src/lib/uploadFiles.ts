@@ -1,6 +1,10 @@
-export async function uploadFiles(files: File[]) {
+export async function uploadFiles(files: File[], slug?: string) {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
+
+  if (slug) {
+    formData.append("slug", slug); // pass existing slug if provided
+  }
 
   const res = await fetch("/api/upload", {
     method: "POST",
