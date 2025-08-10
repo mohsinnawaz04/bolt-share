@@ -12,7 +12,7 @@ export default function Navlist({
         </Link>
       </li>
       <li>
-        <Link href={"#"} className="nav-link">
+        <Link href={"/about"} className="nav-link">
           <Button className="w-full">About</Button>
         </Link>
       </li>

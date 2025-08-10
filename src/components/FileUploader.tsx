@@ -26,6 +26,8 @@ import { saveInitialFilesToLocalStorage } from "@/lib/utils";
 import { uploadFiles } from "@/lib/uploadFiles";
 import { toast } from "sonner";
 import { randomBytes } from "crypto";
+import axios, { AxiosProgressEvent } from "axios";
+import { supabase } from "@/lib/supabase";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -103,39 +105,39 @@ const getFileIcon = (file: { file: File | { type: string; name: string } }) => {
   return <FileIcon className="size-5 opacity-60" />;
 };
 
-const getFilePreview = (file: {
-  file: File | { type: string; name: string; url?: string };
-}) => {
-  const fileType = file.file instanceof File ? file.file.type : file.file.type;
-  const fileName = file.file instanceof File ? file.file.name : file.file.name;
+// const getFilePreview = (file: {
+//   file: File | { type: string; name: string; url?: string };
+// }) => {
+//   const fileType = file.file instanceof File ? file.file.type : file.file.type;
+//   const fileName = file.file instanceof File ? file.file.name : file.file.name;
 
-  const renderImage = (src: string) => (
-    <img
-      src={src}
-      alt={fileName}
-      className="size-full rounded-t-[inherit] object-cover"
-    />
-  );
+//   const renderImage = (src: string) => (
+//     <img
+//       src={src}
+//       alt={fileName}
+//       className="size-full rounded-t-[inherit] object-cover"
+//     />
+//   );
 
-  return (
-    <div className="bg-accent flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit]">
-      {fileType.startsWith("image/") ? (
-        file.file instanceof File ? (
-          (() => {
-            const previewUrl = URL.createObjectURL(file.file);
-            return renderImage(previewUrl);
-          })()
-        ) : file.file.url ? (
-          renderImage(file.file.url)
-        ) : (
-          <ImageIcon className="size-5 opacity-60" />
-        )
-      ) : (
-        getFileIcon(file)
-      )}
-    </div>
-  );
-};
+//   return (
+//     <div className="bg-accent flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit]">
+//       {fileType.startsWith("image/") ? (
+//         file.file instanceof File ? (
+//           (() => {
+//             const previewUrl = URL.createObjectURL(file.file);
+//             return renderImage(previewUrl);
+//           })()
+//         ) : file.file.url ? (
+//           renderImage(file.file.url)
+//         ) : (
+//           <ImageIcon className="size-5 opacity-60" />
+//         )
+//       ) : (
+//         getFileIcon(file)
+//       )}
+//     </div>
+//   );
+// };
 
 const addFilesToArray = (file: FileWithPreview) => {
   const fileObj = {
@@ -160,24 +162,24 @@ type UploadProgress = {
 
 // Function to simulate file upload with more realistic timing and progress
 // Updated simulateUpload that only handles increments until stopped
-function simulateUpload(
-  totalBytes: number,
-  onProgress: (progress: number) => void
-) {
-  let uploaded = 0;
-  const speed = totalBytes / 50; // adjust for speed
-  const interval = setInterval(() => {
-    uploaded += speed;
-    const progress = Math.min(Math.round((uploaded / totalBytes) * 100), 95);
-    onProgress(progress);
-  }, 100);
+// function simulateUpload(
+//   totalBytes: number,
+//   onProgress: (progress: number) => void
+// ) {
+//   let uploaded = 0;
+//   const speed = totalBytes / 50; // adjust for speed
+//   const interval = setInterval(() => {
+//     uploaded += speed;
+//     const progress = Math.min(Math.round((uploaded / totalBytes) * 100), 95);
+//     onProgress(progress);
+//   }, 100);
 
-  // stop increments when real upload finishes
-  return () => clearInterval(interval);
-}
+//   // stop increments when real upload finishes
+//   return () => clearInterval(interval);
+// }
 
 export default function FileUploader() {
-  const maxSizeMB = 5;
+  const maxSizeMB = 50;
   const maxSize = maxSizeMB * 1024 * 1024; // 5MB default
   const maxFiles = 6;
 
@@ -296,12 +298,73 @@ export default function FileUploader() {
   //   });
   // };
 
-  const handleUpload = async () => {
-    const fileList = files.filter(
-      (f) => f.file instanceof File
-    ) as FileWithPreview[];
+  // const handleUpload = async () => {
+  //   const fileList = files.filter(
+  //     (f) => f.file instanceof File
+  //   ) as FileWithPreview[];
 
-    // Initialize progress for all files
+  //   // Initialize progress for all files
+  //   fileList.forEach((file) => {
+  //     setUploadProgress((prev) => [
+  //       ...prev,
+  //       { fileId: file.id, progress: 0, completed: false },
+  //     ]);
+  //   });
+
+  //   const slug = randomBytes(3).toString("hex"); // generate only once
+
+  //   const uploads = fileList.map(
+  //     (file) =>
+  //       new Promise<void>((resolve, reject) => {
+  //         const stopSim = simulateUpload(file.file.size, (progress) => {
+  //           setUploadProgress((prev) =>
+  //             prev.map((item) =>
+  //               item.fileId === file.id ? { ...item, progress } : item
+  //             )
+  //           );
+  //         });
+
+  //         uploadFiles([file.file as File], slug)
+  //           .then(() => {
+  //             stopSim();
+  //             setUploadProgress((prev) =>
+  //               prev.map((item) =>
+  //                 item.fileId === file.id
+  //                   ? { ...item, progress: 100, completed: true }
+  //                   : item
+  //               )
+  //             );
+  //             resolve();
+  //           })
+  //           .catch((err) => {
+  //             stopSim();
+  //             reject(err);
+  //           });
+  //       })
+  //   );
+
+  //   try {
+  //     await Promise.all(uploads);
+  //     toast("Upload complete", {
+  //       description: "All files have been successfully uploaded",
+  //     });
+  //   } catch (err) {
+  //     toast("Upload failed", {
+  //       description: "Some files could not be uploaded",
+  //       action: {
+  //         label: "Retry Upload",
+  //         onClick: () => handleUpload(),
+  //       },
+  //     });
+  //   }
+  // };
+
+  const handleUploadUsingAxios = async () => {
+    const fileList = files.filter(
+      (f): f is FileWithPreview & { file: File } => f.file instanceof File
+    );
+
+    // Step 1 — Initialize progress state for all files
     fileList.forEach((file) => {
       setUploadProgress((prev) => [
         ...prev,
@@ -309,52 +372,64 @@ export default function FileUploader() {
       ]);
     });
 
-    const slug = randomBytes(3).toString("hex"); // generate only once
+    const slug = randomBytes(3).toString("hex"); // Same slug for all files
 
-    const uploads = fileList.map(
-      (file) =>
-        new Promise<void>((resolve, reject) => {
-          const stopSim = simulateUpload(file.file.size, (progress) => {
-            setUploadProgress((prev) =>
-              prev.map((item) =>
-                item.fileId === file.id ? { ...item, progress } : item
-              )
-            );
-          });
+    // Step 2 — Loop over each file and upload
+    const uploadPromises = fileList.map(async (file) => {
+      const random = Math.random().toString(36).slice(2, 8);
+      const filePath = `${Date.now()}_${random}_${file.file.name}`;
 
-          uploadFiles([file.file as File], slug)
-            .then(() => {
-              stopSim();
+      try {
+        // Upload directly to Supabase using Axios
+        const formData = new FormData();
+        formData.append("", file.file);
+
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/uploads/${filePath}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": file.file.type,
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`, // Supabase anon key
+            },
+            onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+              const progress = Math.round(
+                (progressEvent.loaded * 100) / (progressEvent.total || 1)
+              );
               setUploadProgress((prev) =>
                 prev.map((item) =>
-                  item.fileId === file.id
-                    ? { ...item, progress: 100, completed: true }
-                    : item
+                  item.fileId === file.id ? { ...item, progress } : item
                 )
               );
-              resolve();
-            })
-            .catch((err) => {
-              stopSim();
-              reject(err);
-            });
-        })
-    );
+            },
+          }
+        );
 
-    try {
-      await Promise.all(uploads);
-      toast("Upload complete", {
-        description: "All files have been successfully uploaded",
-      });
-    } catch (err) {
-      toast("Upload failed", {
-        description: "Some files could not be uploaded",
-        action: {
-          label: "Retry Upload",
-          onClick: () => handleUpload(),
-        },
-      });
-    }
+        // Step 3 — Create public URL
+        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${filePath}`;
+
+        // Step 4 — Save file info in Prisma
+        await axios.post("/api/save-file", {
+          slug,
+          name: file.file.name,
+          size: file.file.size,
+          type: file.file.type,
+          url: publicUrl,
+        });
+
+        // Step 5 — Mark file as completed
+        setUploadProgress((prev) =>
+          prev.map((item) =>
+            item.fileId === file.id ? { ...item, completed: true } : item
+          )
+        );
+      } catch (err) {
+        console.error("Upload failed:", err);
+      }
+    });
+
+    await Promise.all(uploadPromises);
+    console.log("All files uploaded successfully.");
   };
 
   const [
@@ -503,16 +578,10 @@ export default function FileUploader() {
               <div className="flex justify-end">
                 <Button
                   variant={"default"}
-                  onClick={handleUpload}
-                  // onClick={() =>
-                  //   uploadFiles(
-                  //     files
-                  //       .filter((f) => f.file instanceof File)
-                  //       .map((f) => f.file as File)
-                  //   )
-                  // }
+                  //  onClick={handleUpload}
+                  onClick={handleUploadUsingAxios}
                 >
-                  Upload
+                  Upload Files to DB
                 </Button>
               </div>
             </div>
