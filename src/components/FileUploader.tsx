@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { randomBytes } from "crypto";
 import axios, { AxiosProgressEvent } from "axios";
 import { supabase } from "@/lib/supabase";
+import { LinkDialog } from "./LinkDialog";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -185,6 +186,8 @@ export default function FileUploader() {
 
   // State to track upload progress for each file
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [shareableLink, setShareableLink] = useState("");
 
   // Function to handle newly added files
   // const handleFilesAdded = (addedFiles: FileWithPreview[]) => {
@@ -409,7 +412,7 @@ export default function FileUploader() {
         const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${filePath}`;
 
         // Step 4 — Save file info in Prisma
-        await axios.post("/api/save-file", {
+        const res = await axios.post("/api/save-file", {
           slug,
           name: file.file.name,
           size: file.file.size,
@@ -417,19 +420,27 @@ export default function FileUploader() {
           url: publicUrl,
         });
 
+        setShareableLink(res.data?.shareUrl);
+
         // Step 5 — Mark file as completed
         setUploadProgress((prev) =>
           prev.map((item) =>
             item.fileId === file.id ? { ...item, completed: true } : item
           )
         );
+
+        return res;
       } catch (err) {
         console.error("Upload failed:", err);
       }
     });
 
-    await Promise.all(uploadPromises);
-    console.log("All files uploaded successfully.");
+    const data = await Promise.all(uploadPromises);
+    toast("Upload complete", {
+      description: "File(s) have been uploaded successfully",
+    });
+
+    setOpenDialog(true);
   };
 
   const [
@@ -615,6 +626,12 @@ export default function FileUploader() {
           <span>{errors[0]}</span>
         </div>
       )}
+
+      <LinkDialog
+        shareableLink={shareableLink}
+        isOpen={openDialog}
+        setOpen={setOpenDialog}
+      />
 
       {/* <p
         aria-live="polite"
